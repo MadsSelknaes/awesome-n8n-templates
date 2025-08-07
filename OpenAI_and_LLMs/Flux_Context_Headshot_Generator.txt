@@ -1,0 +1,251 @@
+{
+  "nodes": [
+    {
+      "id": "97db5bd7-cf84-4226-b525-7d14c590aeb6",
+      "name": "Headshot Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "path": "headshot-form",
+        "formTitle": "Headshot Generator",
+        "authentication": "none",
+        "fields": [
+          {
+            "fieldName": "image",
+            "type": "file",
+            "required": true
+          },
+          {
+            "fieldName": "gender",
+            "type": "text",
+            "required": true
+          },
+          {
+            "fieldName": "email",
+            "type": "email",
+            "required": true
+          }
+        ]
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "7f1e988e-d05b-4322-b684-310f7f1493b1",
+      "name": "Upload to ImageBB",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        560,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.imgbb.com/1/upload?key=<YOUR_IMGBB_KEY>",
+        "method": "POST",
+        "sendBinaryData": true,
+        "binaryPropertyName": "image",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "9ff5d6dc-fff1-4c4b-b6a3-242906e7ef1b",
+      "name": "Start Headshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.replicate.com/v1/predictions",
+        "method": "POST",
+        "sendBody": true,
+        "jsonParameters": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "Bearer <YOUR_REPLICATE_KEY>"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "bodyParametersJson": "{\"version\": \"flux-pro-headshot\", \"input\": {\"image\": \"={{$('Upload to ImageBB').json.data.url}}\", \"gender\": \"={{$('Headshot Form').json.gender}}\"}}"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ee99a106-f49c-4f96-967f-118e74b5dabe",
+      "name": "Wait 20s",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1160,
+        300
+      ],
+      "parameters": {
+        "amount": 20,
+        "unit": "seconds"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "34b143f6-3bf7-472a-a30c-c87183b66f5a",
+      "name": "Get Prediction",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1460,
+        300
+      ],
+      "parameters": {
+        "url": "={{$('Start Headshot').json.urls.get}}",
+        "method": "GET",
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "Bearer <YOUR_REPLICATE_KEY>"
+          }
+        ],
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "1d8b7a23-3b09-4a94-8045-179e4bc2fc0d",
+      "name": "Fetch Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "url": "={{$('Get Prediction').json.output[0]}}",
+        "method": "GET",
+        "responseFormat": "file",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "d06e26e6-12cd-466b-9028-8258e3615756",
+      "name": "Store Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2060,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.imgbb.com/1/upload?key=<YOUR_IMGBB_KEY>",
+        "method": "POST",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "82a4844b-dadd-4ac7-af1f-469a7bdc119b",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        2360,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toEmail": "={{$('Headshot Form').json.email}}",
+        "subject": "Your AI Headshot",
+        "text": "={{$('Store Result').json.data.url}}"
+      },
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "Headshot Form": {
+      "main": [
+        [
+          {
+            "node": "Upload to ImageBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to ImageBB": {
+      "main": [
+        [
+          {
+            "node": "Start Headshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Headshot": {
+      "main": [
+        [
+          {
+            "node": "Wait 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 20s": {
+      "main": [
+        [
+          {
+            "node": "Get Prediction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Prediction": {
+      "main": [
+        [
+          {
+            "node": "Fetch Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Image": {
+      "main": [
+        [
+          {
+            "node": "Store Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Result": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "active": false,
+  "name": "Flux Context Headshot Generator",
+  "id": "a79365e5-fc32-464e-8c7e-86ba33c02d9d",
+  "pinData": {},
+  "tags": []
+}
