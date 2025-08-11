@@ -1,0 +1,407 @@
+{
+  "name": "Update from mail (Multi-Agent on one canvas)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        -20
+      ],
+      "id": "chatTrigger",
+      "name": "When chat message received"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -250,
+        -20
+      ],
+      "id": "aiAgentPrimary",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -370,
+        -140
+      ],
+      "id": "openrouterPrimary",
+      "name": "OpenRouter Chat Model (Primary)",
+      "credentials": {
+        "openRouterApi": {
+          "id": "<<<OPENROUTER_CREDENTIAL_ID>>>",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "key": "lead_agent_mem",
+        "window": 8,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.memorySimple",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        -140
+      ],
+      "id": "memoryPrimary",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "displayName": "AI Agent Mail Manager",
+        "toolPrompt": "You are an email operations specialist. Inputs may include: {gmail_query, threadId, messageId, reply_instructions}. If gmail_query provided, fetch up to 10 recent messages. If reply desired, produce {messageId, threadId, replySubject, replyBody}. If no action is needed, set action=no_action.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolAiAgent",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        160
+      ],
+      "id": "aiToolMail",
+      "name": "AI Agent Tool: Mail Manager"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        260
+      ],
+      "id": "openrouterMail",
+      "name": "OpenRouter Chat Model (Mail Agent)",
+      "credentials": {
+        "openRouterApi": {
+          "id": "<<<OPENROUTER_CREDENTIAL_ID>>>",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "key": "mail_agent_mem",
+        "window": 6,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.memorySimple",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        340
+      ],
+      "id": "memoryMail",
+      "name": "Simple Memory (Mail)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "additionalFields": {
+          "q": "={{$json.gmail_query || ''}}",
+          "includeSpamTrash": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 3,
+      "position": [
+        60,
+        320
+      ],
+      "id": "gmailGetMany",
+      "name": "Get many messages in Gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "<<<GMAIL_CREDENTIAL_ID>>>",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{$json.messageId}}",
+        "additionalFields": {
+          "body": "={{$json.replyBody}}",
+          "subject": "={{$json.replySubject || ''}}",
+          "threadId": "={{$json.threadId}}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 3,
+      "position": [
+        260,
+        260
+      ],
+      "id": "gmailReply",
+      "name": "Reply to a message in Gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "<<<GMAIL_CREDENTIAL_ID>>>",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "displayName": "AI Update Manager",
+        "toolPrompt": "You are a data maintenance specialist. Input will contain {rowId, updateFields}. First, request a lookup to fetch the existing row, then reason about safe update and output {rowId, updateFields, rationale}.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolAiAgent",
+      "typeVersion": 1,
+      "position": [
+        480,
+        120
+      ],
+      "id": "aiToolUpdate",
+      "name": "AI Agent Tool: Update Manager"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/openai/gpt-4.1-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        650,
+        240
+      ],
+      "id": "openrouterUpdate",
+      "name": "OpenRouter Chat Model (Update Agent)",
+      "credentials": {
+        "openRouterApi": {
+          "id": "<<<OPENROUTER_CREDENTIAL_ID>>>",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "key": "update_agent_mem",
+        "window": 6,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.memorySimple",
+      "typeVersion": 1,
+      "position": [
+        650,
+        330
+      ],
+      "id": "memoryUpdate",
+      "name": "Simple Memory (Update)"
+    },
+    {
+      "parameters": {
+        "operation": "getRow",
+        "tableId": "<<<TABLE_ID>>>",
+        "rowId": "={{$json.rowId}}"
+      },
+      "type": "n8n-nodes-base.baserow",
+      "typeVersion": 2,
+      "position": [
+        900,
+        200
+      ],
+      "id": "baserowGetRow",
+      "name": "Get a row in Baserow",
+      "credentials": {
+        "baserowApi": {
+          "id": "<<<BASEROW_CREDENTIAL_ID>>>",
+          "name": "Baserow API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "updateRow",
+        "tableId": "<<<TABLE_ID>>>",
+        "rowId": "={{$json.rowId}}",
+        "fields": "={{$json.updateFields}}"
+      },
+      "type": "n8n-nodes-base.baserow",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        260
+      ],
+      "id": "baserowUpdateRow",
+      "name": "Update a row in Baserow",
+      "credentials": {
+        "baserowApi": {
+          "id": "<<<BASEROW_CREDENTIAL_ID>>>",
+          "name": "Baserow API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model (Primary)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Tool: Mail Manager": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Get many messages in Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model (Mail Agent)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Tool: Mail Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory (Mail)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Tool: Mail Manager",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages in Gmail": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message in Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Tool: Update Manager": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Get a row in Baserow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model (Update Agent)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Tool: Update Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory (Update)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Tool: Update Manager",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row in Baserow": {
+      "main": [
+        [
+          {
+            "node": "Update a row in Baserow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "multiagent-openrouter-1.106.0",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
